@@ -108,3 +108,5 @@ small {
 }
 small a { color: #222; text-decoration: none; border-bottom: thin solid #ccc; }
 small a:hover { border-bottom-color: #222; }
+
+@font-face { font-family:icon; src: url('http://bennettfeely.com/fonts/icons.woff'); }
