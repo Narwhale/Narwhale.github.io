@@ -8,27 +8,3 @@ text-shadow: 0 1px 0 #ccc, 0 2px 0 #c9c9c9, 0 3px 0 #bbb, 0 4px 0 #b9b9b9, 0 5px
 h1{
   padding:20px;
 }
-
-#div.hero-unit{
-  top:0;
-  z-index:1;
-  transform-origin:top center;
-  animation: butts 1.6s forwards;
-}
-@keyframes butts {
-    0% {
-        transform: perspective(800px) rotateX(-90deg);
-        opacity: 1;
-    } 
-    40% {
-        transform: perspective(800px) rotateX(30deg);
-        opacity: 1;
-    }
-    70% {
-        transform: perspective(800px) rotateX(-10deg);
-    }
-    100% {
-        transform: perspective(800px) rotateX(0deg);
-        opacity: 1;
-    }
-}
