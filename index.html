@@ -1,2 +1,616 @@
 <link href="main.css" rel="stylesheet">
-<iframe width="420" height="315" src="//www.youtube.com/embed/RCKBtsTk8eQ" frameborder="0" allowfullscreen></iframe>
+
+<html>
+<head>
+    <title>surprise.ly</title>
+    <meta http-equiv="Content-type" content="text/html;charset=UTF-8">
+    <link rel="icon" type="image/png" href="exclamation.png">
+    <style type="text/css">
+        * {
+            margin: 0;
+            padding: 0;
+        }
+    
+        body {
+            font-family: sans-serif;
+            font-size: small;
+            background-color: #000000;
+        }
+        
+        body.active {
+            background-color: #022641;
+        }
+        
+        #editor {
+            width: 200px;
+            left: 50%;
+            top: 25%;
+            margin-left: -100px;
+            margin-top: -100px;
+            position: absolute;
+            background-color: #eef5eb;
+            padding-bottom: 8px;
+            border-radius: 1px;
+        }
+        
+        div.inactive {
+            display: none;
+        }
+        
+        div.active {
+            display: inline;
+        }
+    
+        #player2 {
+            visibility: hidden;
+            z-index: -1;
+            position: absolute;
+            top: 0px;
+            left: 0px;
+        }
+        
+        .input {
+            margin: 8px 0px 0px 8px;
+            height: 20px;
+            width: 184px;
+            border-style: solid;
+            border-radius: 1px;
+            border-width: 1px;
+            border-color: #353535;
+            background-color: #eef5eb;
+            color: #353535;
+            outline: none;
+        }
+        
+        .smaller {
+            width: 38px;
+        }
+        
+        .end {
+            width: 35px;
+        }
+        
+        @media screen and (-webkit-min-device-pixel-ratio: 0) {
+            .end {
+                width: 34px;
+            }
+        }
+        
+        button.submit {
+            margin: 8px 0px 0px 8px;
+            height: 20px;
+            width: 184px;
+            outline: none;
+            border-style: solid;
+            border-width: 0px;
+            border-radius: 1px;
+            background-color: #41c064;
+            color: #eef5eb;
+        }
+        
+        button.loop_off {
+            border-width: 1px;
+            border-style: solid;
+            border-color: #353535;
+            background-color: #eef5eb;
+            color: #353535;
+        }
+
+        button.loop_on {
+            border-width: 1px;
+            border-style: solid;
+            border-color: #353535;
+            /*
+            background-color: #0c570a;
+            color: #eef5eb;
+            */
+            background-color: #eef5eb;
+            color: #353535;
+        }
+    </style>
+    <script type="text/javascript">
+    
+      var _gaq = _gaq || [];
+      _gaq.push(['_setAccount', 'UA-35075828-1']);
+      _gaq.push(['_trackPageview']);
+    
+      (function() {
+        var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+        ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+        var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+      })();
+    
+    </script>
+</head>
+<body onload="populateEditor()">
+    <div id="editor" class="inactive">
+        <!-- Barf to all this handler registration, jQuery anyone? -->
+        <input autocomplete="off" id="p1" class="input" type="text" 
+            value="YouTube URL" onchange="parseUrl(this)"
+            onfocus="focusHandler(this, FIELD_DEFAULTS['main'])"
+            onblur="blurHandler(this, FIELD_DEFAULTS['main'])" />
+        <br />
+        <input autocomplete="off" id="p1s" class="input smaller" 
+            value="Start" onfocus="focusHandler(this, FIELD_DEFAULTS['start'])"
+            onblur="blurHandler(this, FIELD_DEFAULTS['start'])" />
+        <input autocomplete="off" id="p1e" class="input smaller" 
+            value="End" onfocus="focusHandler(this, FIELD_DEFAULTS['end'])"
+            onblur="blurHandler(this, FIELD_DEFAULTS['end'])" />
+        <button id="p1l" class="input smaller loop_off" value="0" onclick="toggleLoop(this)">Loop?</button>
+        <input autocomplete="off" id="p1v" class="input end" 
+            value="Vol." onfocus="focusHandler(this, FIELD_DEFAULTS['vol'])"
+            onblur="blurHandler(this, FIELD_DEFAULTS['vol'])" />
+        <br />
+        <input autocomplete="off" id="p2" class="input" type="text" 
+            value="Dub YouTube URL (opt.)" onchange="parseUrl(this)"
+            onfocus="focusHandler(this, FIELD_DEFAULTS['dub'])"
+            onblur="blurHandler(this, FIELD_DEFAULTS['dub'])" />
+        <br />
+        <input autocomplete="off" id="p2s" class="input smaller" 
+            value="Start" onfocus="focusHandler(this, FIELD_DEFAULTS['start'])"
+            onblur="blurHandler(this, FIELD_DEFAULTS['start'])" />
+        <input autocomplete="off" id="p2e" class="input smaller" 
+            value="End" onfocus="focusHandler(this, FIELD_DEFAULTS['end'])"
+            onblur="blurHandler(this, FIELD_DEFAULTS['end'])" />
+        <button id="p2l" class="input smaller loop_off" value="0" onclick="toggleLoop(this)">Loop?</button>
+        <input autocomplete="off" id="p2v" class="input end" 
+            value="Vol." onfocus="focusHandler(this, FIELD_DEFAULTS['vol'])"
+            onblur="blurHandler(this, FIELD_DEFAULTS['vol'])" />
+        <br />
+        <button class="submit" onclick="generateLink()">Go!</button>
+        <br />
+        <div id="output" class="input inactive">
+            <input autocomplete="off" readonly="readonly" onfocus="this.select()" id="link" class="input smaller" />
+        </div>
+    </div>
+    <div id="player1"></div>
+    <div id="player2"></div>
+    <script type="text/javascript">
+        var tag = document.createElement('script');
+        tag.src = "https://www.youtube.com/player_api";
+        var firstScriptTag = document.getElementsByTagName('script')[0];
+        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+        
+        var DEFAULT_START = 0;
+        var DEFAULT_END = 0;
+        var DEFAULT_LOOP = 0;
+        var DEFAULT_VOL_FG = 0;
+        var DEFAULT_VOL_BG = 100;
+        
+        var p1, p2;
+        
+        function populateEditor() {
+            blurHandler(document.getElementById('p1'), FIELD_DEFAULTS['main'])
+            blurHandler(document.getElementById('p1s'), FIELD_DEFAULTS['start'])
+            blurHandler(document.getElementById('p1e'), FIELD_DEFAULTS['end'])
+            blurHandler(document.getElementById('p1l'), FIELD_DEFAULTS['loop'])
+            blurHandler(document.getElementById('p1v'), FIELD_DEFAULTS['vol'])
+            blurHandler(document.getElementById('p2'), FIELD_DEFAULTS['dub'])
+            blurHandler(document.getElementById('p2s'), FIELD_DEFAULTS['start'])
+            blurHandler(document.getElementById('p2e'), FIELD_DEFAULTS['end'])
+            blurHandler(document.getElementById('p2l'), FIELD_DEFAULTS['loop'])
+            blurHandler(document.getElementById('p2v'), FIELD_DEFAULTS['vol'])
+        }
+        
+        function toggleLoop(node) {
+            var ON = 'loop_on', OFF = 'loop_off';
+            
+            node.value = 1 - node.value;
+            if(node.className.search(ON) != -1) {
+                node.textContent = 'Loop?';
+                node.className = node.className.replace(ON, OFF);
+            }
+            else {
+                node.textContent = 'Loop.';
+                node.className = node.className.replace(OFF, ON);
+            }
+        }
+        
+        function focusHandler(node, val) {
+            if(node.value == val)
+                node.value = ''
+        }
+        
+        function blurHandler(node, val) {
+            if(node.value == '')
+                node.value = val
+        }
+        
+        // From http://james.padolsey.com/javascript/parsing-urls-with-the-dom/
+        function parseUrlHelper(url) {
+            var a =  document.createElement('a');
+            a.href = url;
+            return {
+                source: url,
+                protocol: a.protocol.replace(':',''),
+                host: a.hostname,
+                port: a.port,
+                query: a.search,
+                params: (function(){
+                    var ret = {},
+                        seg = a.search.replace(/^\?/,'').split('&'),
+                        len = seg.length, i = 0, s;
+                    for (;i<len;i++) {
+                        if (!seg[i]) { continue; }
+                        s = seg[i].split('=');
+                        ret[s[0]] = s[1];
+                    }
+                    return ret;
+                })(),
+                file: (a.pathname.match(/\/([^\/?#]+)$/i) || [,''])[1],
+                hash: a.hash.replace('#',''),
+                path: a.pathname.replace(/^([^\/])/,'/$1'),
+                relative: (a.href.match(/tps?:\/\/[^\/]+(.+)/) || [,''])[1],
+                segments: a.pathname.replace(/^\//,'').split('/')
+            };
+        }
+        
+        function extractTimeHash(hash) {
+            var timeTag = 't=';
+            if(hash.indexOf(timeTag) == 0) {
+                return hash.substring(timeTag.length);
+            }
+            return null;
+        }
+        
+        function parseUrl(node) {
+            var parsedUrl = parseUrlHelper(node.value);
+            var videoId, startTime;
+            if(parsedUrl.host == 'youtu.be') {
+                videoId = parsedUrl.file;
+                // Hash time supercedes param time
+                startTime = extractTimeHash(parsedUrl.hash);
+                if(!startTime) {
+                    startTime = parsedUrl.params.t;
+                }
+            }
+            else if(parsedUrl.host == 'www.youtube.com' && parsedUrl.file == 'watch') {
+                videoId = parsedUrl.params.v;
+                // Hash time supercedes param time
+                startTime = extractTimeHash(parsedUrl.hash);
+                if(!startTime) {
+                    startTime = parsedUrl.params.t;
+                }
+            }
+            else {
+                alert('Not a valid YouTube URL.');
+                return;
+            }
+            
+            // Populate fields
+            node.value = videoId;
+            if(startTime) {
+                time_field = document.getElementById(node.id + 's');
+                time_field.value = startTime;
+            }
+        }
+        
+        function parseTime(time) {
+            var seconds = 0;
+            var HR = 'h', MIN = 'm', SEC = 's'
+            var COLON = ':'
+            
+            if(time.search(COLON) != -1) {
+                times = time.split(COLON).reverse();
+                for(i = 0; i < Math.min(3, times.length); i++) {
+                    seconds += times[i] * Math.pow(60, i);
+                }
+                return seconds;
+            }
+            
+            if(time.search(HR) != -1) {
+                hours = parseInt(time.substr(0, time.search(HR)));
+                seconds += hours * 3600;
+                time = time.substr(time.search(HR) + 1);
+            }
+            
+            if(time.search(MIN) != -1) {
+                minutes = parseInt(time.substr(0, time.search(MIN)));
+                seconds += minutes * 60;
+                time = time.substr(time.search(MIN) + 1);
+            }
+            
+            if(time.search(SEC) != -1) {
+                seconds += parseInt(time.substr(0, time.search(SEC)));
+            }
+            // Trailing seconds indicator is not required
+            else if(time.length > 0) {
+                seconds += parseInt(time);
+            }
+            
+            return seconds;
+        }
+        
+        function generateLink() {
+            var p1i = document.getElementById('p1').value
+            var p1s = document.getElementById('p1s').value
+            var p1e = document.getElementById('p1e').value
+            var p1l = document.getElementById('p1l').value
+            var p1v = document.getElementById('p1v').value
+            var p2i = document.getElementById('p2').value
+            var p2s = document.getElementById('p2s').value
+            var p2e = document.getElementById('p2e').value
+            var p2l = document.getElementById('p2l').value
+            var p2v = document.getElementById('p2v').value
+            
+            var p1_params = [
+                p1i != FIELD_DEFAULTS['main'] ? p1i : false,
+                p1s != FIELD_DEFAULTS['start'] ? parseTime(p1s) : DEFAULT_START,
+                p1e != FIELD_DEFAULTS['end'] ? parseTime(p1e) : DEFAULT_END,
+                p1l != FIELD_DEFAULTS['loop'] ? parseInt(p1l) : DEFAULT_LOOP,
+                p1v != FIELD_DEFAULTS['vol'] ? parseInt(p1v) : 
+                    (p2i != FIELD_DEFAULTS['dub'] ? DEFAULT_VOL_FG : DEFAULT_VOL_BG)
+            ]
+            
+            if(!p1_params[0])
+                return;
+                
+            var p2_params = [
+                p2i != FIELD_DEFAULTS['dub'] ? p2i : false,
+                p2s != FIELD_DEFAULTS['start'] ? parseTime(p2s) : DEFAULT_START,
+                p2e != FIELD_DEFAULTS['end'] ? parseTime(p2e) : DEFAULT_END,
+                p2l != FIELD_DEFAULTS['loop'] ? parseInt(p2l) : DEFAULT_LOOP,
+                p2v != FIELD_DEFAULTS['vol'] ? parseInt(p2v) : DEFAULT_VOL_BG
+            ]
+            
+            var dub = false
+            if(p2_params[0])
+                dub = true 
+            
+            var url = window.location + '?'
+            
+            for(i = 0; i < p1_params.length; i++) {
+                url += p1_params[i] + (i == p1_params.length - 1 && !dub ? '' : ':');
+                if(dub)
+                    url += p2_params[i] + (i == p1_params.length - 1 ? '' : ':');
+            }
+            
+            window.location = url;
+        }
+        
+        function validateId(id) {
+            var r = /^([\w\-]{11})$/;
+            return id.match(r) != null;
+        }
+        
+        var FIELD_DEFAULTS = {
+            'main': 'YouTube URL',
+            'dub': 'Dub YouTube URL (opt.)',
+            'start': 'Start',
+            'end': 'End',
+            'loop': 'Loop?',
+            'vol': 'Vol.'
+        }
+        
+        function showEditor() {
+            editor = document.getElementById('editor');
+            editor.className = 'active';
+            document.body.className = 'active';
+        }
+        
+        function initPlayerSettings() {
+            // Maybe redirect to unescaped version of the URL (for analytics)
+            var hash = decodeURIComponent(window.location.search.substr(1))
+            
+            if(!hash) {
+                showEditor();
+                return false;
+            }
+            
+            hash = hash.split(':');
+            
+            var ID_INDEX = 0;
+            var START_INDEX = 1;
+            var END_INDEX = 2;
+            var LOOP_INDEX = 3;
+            var VOLUME_INDEX = 4;
+
+            var STRIDE = 2;
+
+            function p1Idx(idx) { return idx * STRIDE; }
+            function p2Idx(idx) { return idx * 2 + 1; }
+            
+            var p2i = hash[p2Idx(ID_INDEX)];
+            var dub = p2i && validateId(p2i);
+            
+            if(!dub) STRIDE = 1;
+            
+            var p1s = hash[p1Idx(START_INDEX)];
+            var p1e = hash[p1Idx(END_INDEX)];
+            var p1l = hash[p1Idx(LOOP_INDEX)];
+            var p1v = hash[p1Idx(VOLUME_INDEX)];
+            p1 = {
+                'name': 'player1',
+                'id': hash[p1Idx(ID_INDEX)],
+                'start': p1s ? parseInt(p1s) : DEFAULT_START,
+                'end': p1e ? parseFloat(p1e) : false,
+                'loop': p1l ? parseInt(p1l) == 1 : true,
+                'volume': p1v ? parseInt(p1v) : (dub ? DEFAULT_VOL_FG : DEFAULT_VOL_BG),
+                'ready': false,
+                'first': true,
+                'paused': true
+            };
+            
+            var p2s = hash[p2Idx(START_INDEX)];
+            var p2e = hash[p2Idx(END_INDEX)];
+            var p2l = hash[p2Idx(LOOP_INDEX)];
+            var p2v = hash[p2Idx(VOLUME_INDEX)];
+            p2 = {
+                'name': 'player2',
+                'id': p2i,
+                'start': p2s ? parseInt(p2s) : DEFAULT_START,
+                'end': p2e ? parseFloat(p2e) : false,
+                'loop': p2l ? parseInt(p2l) == 1 : true,
+                'volume': p2v ? parseInt(p2v) : DEFAULT_VOL_BG,
+                'ready': !dub,
+                'first': true,
+                'paused': true
+            };
+            
+            return true;
+        }
+        
+        function createPlayers() {
+            p1['player'] = new YT.Player('player1', {
+                height: '100%',
+                width: '100%',
+                playerVars: {
+                'rel': 0,
+                'autoplay': 1,
+                'disablekb': 1,
+                'controls': 0,
+                'modestbranding': 1,
+                'iv_load_policy': 3,
+                'showinfo': 0,
+                'start': p1['start']
+                },
+                videoId: p1['id'],
+                events: {
+                    'onReady': function(event) { onPlayerReady(event, p1) },
+                    'onStateChange': function(event) { onPlayerStateChange(event, p1) }
+                }
+            });
+            
+            p1['timer'] = setInterval(function() { watchEnd(p1) }, 250);
+            
+            if(!p2['ready']) {
+                p2['player'] = new YT.Player('player2', {
+                    height: '240',
+                    width: '320',
+                    playerVars: {
+                    'rel': 0,
+                    'autoplay': 1,
+                    'disablekb': 1,
+                    'controls': 0,
+                    'modestbranding': 1,
+                    'iv_load_policy': 3,
+                    'showinfo': 0,
+                    'start': p2['start']
+                    },
+                    videoId: p2['id'],
+                    events: {
+                        'onReady': function(event) { onPlayerReady(event, p2) },
+                        'onStateChange': function(event) { onPlayerStateChange(event, p2) }
+                    }
+                });
+                
+                p2['timer'] = setInterval(function() { watchEnd(p2) }, 250);
+            }
+        }
+        
+        function watchEnd(settings) {
+            player = settings['player'];
+            if(player.getCurrentTime) {
+                currentTime = player.getCurrentTime();
+                // console.log('Current time for ' + settings['name'] + ': ' + 
+                //     currentTime + '/' + player.getDuration());
+                if((settings['end'] && currentTime > settings['end']) ||
+                        (settings['loop'] && currentTime == player.getDuration())) {
+                    if(!settings['loop'])
+                        player.pauseVideo();
+                        
+                    player.seekTo(settings['start'], true);
+                    
+                    if(settings['loop'])
+                        player.playVideo();
+                }
+            }
+        }
+                
+        function onYouTubePlayerAPIReady() {
+            if(initPlayerSettings()) {
+                createPlayers();
+            }
+        }
+        
+        function allReady() {
+            if(p2['player'])
+                return p1['ready'] && p2['ready'];
+            else
+                return p1['ready'];
+        }
+        
+        function allPaused() {
+            if(p2['player'])
+                return p1['paused'] && p2['paused'];
+            else
+                return p1['paused'];
+        }
+        
+        function firstPlay() {
+            if(p2['player'])
+                return p1['first'] && p2['first'];
+            else
+                return p1['first'];
+        }
+        
+        function pauseAll() {
+            if(p1['player']) {
+                p1['player'].pauseVideo();
+                p1['paused'] = true;
+            }
+            if(p2['player']) {
+                p2['player'].pauseVideo();
+                p2['paused'] = true;
+            }
+        }
+        
+        function playAll() {
+            if(p1['player']) {
+                p1['player'].playVideo();
+                p1['first'] = false;
+                p1['paused'] = false;
+            }
+            if(p2['player']) {
+                p2['player'].playVideo();
+                p2['first'] = false;
+                p2['paused'] = false;
+            }
+        }
+        
+        function bufferedDuration(player) {
+            return player.getVideoLoadedFraction() * player.getDuration()
+        }
+        
+        function adequatelyBuffered(player) {
+            return bufferedDuration(player) > 8 || 
+                    player.getVideoLoadedFraction() > 0.9;
+        }
+        
+        function allAdequatelyBuffered() {
+            if(p2['player'])
+                return adequatelyBuffered(p1['player']) && adequatelyBuffered(p2['player']);
+            else
+                return adequatelyBuffered(p1['player']);
+        }
+                
+        function onPlayerReady(event, settings) {
+            event.target.setVolume(settings['volume']);
+            event.target.pauseVideo();
+        }
+        
+        function onPlayerStateChange(event, settings) {
+            var PLAY = 1, PAUSE = 2;
+            
+            if (event.data == PLAY) {
+                playAll();
+            }
+            else if (event.data == PAUSE) {
+                if(firstPlay()) {
+                    console.log('First play')
+                    var firstPlayInterval = setInterval(function() {
+                        if(allAdequatelyBuffered()) {
+                            clearInterval(firstPlayInterval);
+                            console.log('Play all');
+                            playAll();
+                        }
+                    }, 250);
+                }
+                else {
+                    pauseAll();
+                }
+            }
+        }
+        </script>
+    </body>
+</html>
